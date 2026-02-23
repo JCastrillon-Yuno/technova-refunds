@@ -20,7 +20,11 @@ No environment variables required.
 
 ## Screenshots
 
-<!-- Add screenshots here -->
+**Full dashboard — all 500 records, PatternAlerts firing on load, spike visible in timeline**
+![Dashboard overview](screenshots/dashboard-overview.png)
+
+**Filtered view — Brazil + High risk + Visa/Mastercard, breakdown charts and Pattern Discovery updating live**
+![Filtered view](screenshots/filtered-view.png)
 
 ---
 
