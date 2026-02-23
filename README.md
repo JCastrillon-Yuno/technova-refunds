@@ -2,9 +2,7 @@
 
 An interactive dashboard built to investigate a 340% spike in refund activity across Brazil, Mexico, and Colombia. Submitted for Yuno's AI challenge.
 
-**[Live Demo](#)** · **[Repo](#)**
-
-> Replace the links above with your Vercel URL and GitHub URL before submitting.
+**[Live Demo](https://technova-refunds.vercel.app)** · **[Repo](https://github.com/JCastrillon-Yuno/technova-refunds)**
 
 ---
 
