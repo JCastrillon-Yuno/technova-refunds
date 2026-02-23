@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TechNova Refund Investigation Suite — Yuno AI Challenge</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0a0a0a;
+    color: #e5e5e5;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .deck { width: 100%; height: 100vh; position: relative; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .slide.active { display: flex; }
+  .slide.visible { opacity: 1; }
+
+  /* Layout variants */
+  .slide.top { justify-content: flex-start; padding-top: 70px; }
+  .slide.left { align-items: flex-start; }
+
+  /* Nav */
+  .nav {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 12px; z-index: 100;
+  }
+  .nav button {
+    background: #1a1a1a; border: 1px solid #333; color: #999;
+    padding: 6px 16px; border-radius: 999px; font-size: 13px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .nav button:hover { background: #262626; color: #fff; }
+  .nav button:disabled { opacity: 0.3; cursor: default; }
+  .nav .counter { font-size: 12px; color: #555; min-width: 48px; text-align: center; }
+
+  /* Dots */
+  .dots {
+    position: fixed; bottom: 28px; right: 36px;
+    display: flex; gap: 6px; align-items: center;
+  }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #333; transition: background 0.2s;
+    cursor: pointer;
+  }
+  .dot.active { background: #ef4444; }
+
+  /* Slide number */
+  .slide-num {
+    position: fixed; top: 24px; right: 36px;
+    font-size: 11px; color: #3f3f3f; letter-spacing: 0.1em;
+  }
+
+  /* Typography */
+  .label {
+    font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+    color: #ef4444; font-weight: 600; margin-bottom: 14px;
+  }
+  h1 { font-size: 52px; font-weight: 800; line-height: 1.1; color: #fff; }
+  h2 { font-size: 36px; font-weight: 700; line-height: 1.2; color: #fff; }
+  h3 { font-size: 20px; font-weight: 600; color: #fff; }
+  p { font-size: 16px; line-height: 1.7; color: #a3a3a3; }
+  .subtitle { font-size: 20px; color: #737373; margin-top: 10px; }
+
+  /* Cards */
+  .card-grid {
+    display: grid; gap: 16px; width: 100%; max-width: 960px;
+  }
+  .card-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .card-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .card-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .card {
+    background: #111; border: 1px solid #1f1f1f;
+    border-radius: 14px; padding: 22px 24px;
+  }
+  .card .pts {
+    font-size: 28px; font-weight: 800; color: #ef4444; line-height: 1;
+    margin-bottom: 6px;
+  }
+  .card h3 { font-size: 14px; color: #e5e5e5; margin-bottom: 8px; }
+  .card p { font-size: 13px; color: #737373; line-height: 1.6; }
+  .card.green .pts { color: #22c55e; }
+  .card.yellow .pts { color: #eab308; }
+
+  /* Score total */
+  .score-total {
+    background: linear-gradient(135deg, #1a0a0a, #1a1010);
+    border: 1px solid #3f1f1f;
+    border-radius: 16px;
+    padding: 28px 36px;
+    text-align: center;
+    width: 100%; max-width: 360px;
+  }
+  .score-total .big { font-size: 64px; font-weight: 900; color: #ef4444; line-height: 1; }
+  .score-total .sub { font-size: 14px; color: #737373; margin-top: 6px; }
+
+  /* Anomaly list */
+  .anomaly-list { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 700px; }
+  .anomaly {
+    display: flex; align-items: flex-start; gap: 16px;
+    background: #111; border: 1px solid #1f1f1f; border-radius: 12px; padding: 16px 20px;
+  }
+  .anomaly .icon { font-size: 22px; margin-top: 2px; }
+  .anomaly h3 { font-size: 14px; color: #e5e5e5; margin-bottom: 4px; }
+  .anomaly p { font-size: 13px; color: #737373; }
+
+  /* Tag chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 999px;
+    padding: 4px 12px; font-size: 12px; color: #a3a3a3;
+  }
+  .chip.red { background: #1a0a0a; border-color: #3f1010; color: #f87171; }
+  .chip.green { background: #0a1a0a; border-color: #103f10; color: #4ade80; }
+
+  /* Two-column layout */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; width: 100%; max-width: 960px; align-items: start; }
+  .two-col.center { align-items: center; }
+
+  /* List */
+  .check-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .check-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; color: #a3a3a3; line-height: 1.5; }
+  .check-list li::before { content: '✓'; color: #22c55e; font-weight: 700; margin-top: 1px; flex-shrink: 0; }
+
+  /* Code block */
+  .code {
+    background: #111; border: 1px solid #1f1f1f; border-radius: 10px;
+    padding: 14px 18px; font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px; color: #a3a3a3; line-height: 1.7;
+  }
+  .code .c { color: #737373; }
+  .code .v { color: #ef4444; }
+  .code .k { color: #3b82f6; }
+  .code .s { color: #22c55e; }
+
+  /* Timeline bar */
+  .timeline {
+    width: 100%; max-width: 700px;
+    background: #111; border: 1px solid #1f1f1f; border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .tbar {
+    display: flex; height: 10px; border-radius: 999px; overflow: hidden;
+    margin: 12px 0 8px;
+  }
+  .tbar .baseline { background: #262626; flex: 44; }
+  .tbar .spike { background: #ef4444; flex: 46; }
+  .tlabels { display: flex; justify-content: space-between; font-size: 11px; color: #555; }
+
+  /* Stretch cards */
+  .stretch-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; width: 100%; max-width: 960px; }
+  .stretch-card {
+    background: #111; border: 1px solid #1f1f1f; border-radius: 14px; padding: 20px;
+  }
+  .stretch-card .icon { font-size: 24px; margin-bottom: 10px; }
+  .stretch-card h3 { font-size: 14px; color: #e5e5e5; margin-bottom: 6px; }
+  .stretch-card p { font-size: 12px; color: #737373; line-height: 1.6; }
+
+  /* CTA slide */
+  .cta { text-align: center; }
+  .demo-link {
+    display: inline-block; margin-top: 24px;
+    background: #ef4444; color: #fff; font-weight: 600; font-size: 15px;
+    padding: 12px 32px; border-radius: 999px; text-decoration: none;
+    transition: background 0.15s;
+  }
+  .demo-link:hover { background: #dc2626; }
+  .divider { width: 40px; height: 3px; background: #ef4444; border-radius: 2px; margin: 20px auto; }
+
+  /* Separator line */
+  hr { border: none; border-top: 1px solid #1f1f1f; margin: 16px 0; }
+
+  /* Slide-specific bg accents */
+  .slide::before {
+    content: ''; position: absolute;
+    width: 500px; height: 500px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(239,68,68,0.04) 0%, transparent 70%);
+    top: -100px; right: -100px; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- ── 1. Title ── -->
+  <div class="slide cta" data-index="0">
+    <div class="label">Yuno AI Challenge · Frontend Submission</div>
+    <h1>TechNova Refund<br>Investigation Suite</h1>
+    <div class="divider"></div>
+    <p class="subtitle">Investigating a 340% refund spike across<br>Brazil, Mexico &amp; Colombia</p>
+    <div class="chips" style="justify-content:center; margin-top: 24px;">
+      <span class="chip">Vite + React 19</span>
+      <span class="chip">TypeScript</span>
+      <span class="chip">Recharts</span>
+      <span class="chip">Tailwind CSS v4</span>
+    </div>
+  </div>
+
+  <!-- ── 2. The Problem ── -->
+  <div class="slide left top" data-index="1">
+    <div style="max-width:800px; width:100%;">
+      <div class="label">The Problem</div>
+      <h2>Refund volume jumped 340%<br>starting day 45 of the period</h2>
+      <p style="margin-top:12px; max-width: 560px;">No manual way to find which customers, cities, or processors were responsible — or whether it was fraud, ops failure, or coincidence.</p>
+
+      <div class="timeline" style="margin-top:32px;">
+        <div style="display:flex; justify-content:space-between; font-size:12px; color:#555; margin-bottom:4px;">
+          <span>Oct 1</span><span>Nov 14 — spike starts</span><span>Dec 29</span>
+        </div>
+        <div class="tbar">
+          <div class="baseline"></div>
+          <div class="spike"></div>
+        </div>
+        <div class="tlabels">
+          <span>~3.5 refunds/day</span>
+          <span style="color:#ef4444;">~13 refunds/day</span>
+        </div>
+      </div>
+
+      <div class="chips" style="margin-top: 24px;">
+        <span class="chip red">500 records</span>
+        <span class="chip red">90-day window</span>
+        <span class="chip red">3 countries</span>
+        <span class="chip red">3 embedded anomalies</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. Data Viz — 25pts ── -->
+  <div class="slide top" data-index="2">
+    <div style="width:100%;max-width:960px;">
+      <div class="label">Criterion 1 · 25 points</div>
+      <h2>Data Visualization Quality</h2>
+      <div class="card-grid cols-3" style="margin-top:28px;">
+        <div class="card">
+          <h3>Timeline Chart</h3>
+          <p>Area chart of daily refund volume. Red reference line marks the exact spike start. Tooltip shows count + top reason per day.</p>
+        </div>
+        <div class="card">
+          <h3>4 KPI Cards</h3>
+          <p>Total refunds, refund rate, avg amount, total volume — each with a red/green trend arrow vs the prior equivalent period.</p>
+        </div>
+        <div class="card">
+          <h3>2×2 Breakdown Grid</h3>
+          <p>Country bar · Reason donut · Payment method bar · Risk distribution — all update live on filter change.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4. Filtering — 20pts ── -->
+  <div class="slide top" data-index="3">
+    <div style="width:100%;max-width:960px;">
+      <div class="label">Criterion 2 · 20 points</div>
+      <h2>Filtering &amp; Interactivity</h2>
+      <div class="two-col" style="margin-top:28px;">
+        <ul class="check-list">
+          <li>Date range (start / end pickers)</li>
+          <li>Country checkboxes (BR / MX / CO)</li>
+          <li>Refund reason checkboxes (5 types)</li>
+          <li>Payment method checkboxes (6 types)</li>
+          <li>Amount range slider ($0 – $1,500 USD)</li>
+          <li>Risk level radio (All / Low / Medium / High)</li>
+          <li>City filter — set via Pattern Discovery</li>
+          <li>Clear all button</li>
+        </ul>
+        <div class="card">
+          <h3>Single derived state</h3>
+          <p style="margin-top:6px;">All charts, metrics, alerts, and the table derive from one <code style="color:#ef4444">filters</code> object via <code style="color:#ef4444">useMemo</code>. No sync bugs possible — every filter change re-renders the entire view in one pass.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 5. Suspicious detection — 20pts ── -->
+  <div class="slide top" data-index="4">
+    <div style="width:100%;max-width:960px;">
+      <div class="label">Criterion 3 · 20 points</div>
+      <h2>Suspicious Refund Detection</h2>
+      <div class="two-col" style="margin-top:24px;">
+        <div>
+          <div class="code">
+<span class="c">// 8-factor additive score per refund</span>
+<br><span class="k">3+ refunds in 30 days</span>   <span class="v">+30</span>
+<br><span class="k">5+ lifetime refunds</span>      <span class="v">+15</span>
+<br><span class="k">Amount &gt; $500 USD</span>        <span class="v">+20</span>
+<br><span class="k">Account &lt; 60 days old</span>    <span class="v">+15</span>
+<br><span class="k">fraud_prevention reason</span>   <span class="v">+15</span>
+<br><span class="k">duplicate_charge reason</span>   <span class="v">+10</span>
+<br><span class="k">Geo/processor cluster</span>     <span class="v">+20</span>
+<br><span class="k">Refund ≥ 90% of order</span>     <span class="v">+10</span>
+<br>
+<br><span class="c">// Low ≤ 30 · Medium ≤ 60 · High 61+</span>
+          </div>
+        </div>
+        <div>
+          <div class="anomaly-list">
+            <div class="anomaly">
+              <div class="icon">📍</div>
+              <div>
+                <h3>Guadalajara Gang</h3>
+                <p>22 refunds · OpenPay · duplicate_charge · days 50–57</p>
+              </div>
+            </div>
+            <div class="anomaly">
+              <div class="icon">👤</div>
+              <div>
+                <h3>Serial Refunders</h3>
+                <p>10 customers · 5–6 refunds each within 30 days</p>
+              </div>
+            </div>
+            <div class="anomaly">
+              <div class="icon">💰</div>
+              <div>
+                <h3>Bogotá High-Value Cluster</h3>
+                <p>14 refunds · Visa credit · fraud_prevention · $800–1,200 USD</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6. UX — 15pts ── -->
+  <div class="slide top" data-index="5">
+    <div style="width:100%;max-width:960px;">
+      <div class="label">Criterion 4 · 15 points</div>
+      <h2>User Experience</h2>
+      <div class="card-grid cols-4" style="margin-top:28px;">
+        <div class="card">
+          <h3>60-second investigation</h3>
+          <p>PatternAlerts fires on load. No manual digging required to find the first anomaly.</p>
+        </div>
+        <div class="card">
+          <h3>Detail modal</h3>
+          <p>Click any row → see all fields, "why flagged" list with icons, full customer history, mark as reviewed.</p>
+        </div>
+        <div class="card">
+          <h3>Dark neutral palette</h3>
+          <p>Red reserved exclusively for risk signals — never decorative. Green for safe, yellow/orange for warnings.</p>
+        </div>
+        <div class="card">
+          <h3>Responsive sidebar</h3>
+          <p>Collapsible on all screen sizes. Toggle button in header. Overlay on mobile.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 7. Code quality — 10pts ── -->
+  <div class="slide top" data-index="6">
+    <div style="width:100%;max-width:960px;">
+      <div class="label">Criterion 5 · 10 points</div>
+      <h2>Code Quality</h2>
+      <div class="two-col" style="margin-top:28px;">
+        <ul class="check-list">
+          <li>Strict TypeScript — zero build errors</li>
+          <li>Types separated from logic (<code style="font-size:13px; color:#ef4444">src/types/index.ts</code>)</li>
+          <li>Pure utility functions — no side effects in helpers</li>
+          <li>Score computed once; filters slice pre-scored array</li>
+          <li>All derived state via <code style="font-size:13px; color:#ef4444">useMemo</code> — no prop drilling</li>
+          <li>Components are single-responsibility, ~100–150 lines each</li>
+          <li>Zero external UI library dependencies</li>
+        </ul>
+        <div>
+          <div class="card" style="margin-bottom:12px;">
+            <h3>File structure</h3>
+            <p style="font-family: monospace; font-size: 12px; color: #555; line-height: 1.9; margin-top: 6px;">
+              src/types/index.ts<br>
+              src/data/mockData.ts<br>
+              src/utils/riskScoring.ts<br>
+              src/utils/dataHelpers.ts<br>
+              src/components/ (7 components)
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 8. Stretch Goal — 10pts ── -->
+  <div class="slide top" data-index="7">
+    <div style="width:100%;max-width:960px;">
+      <div class="label">Criterion 6 · 10 points</div>
+      <h2>Stretch Goal: Pattern Discovery Tool</h2>
+      <div class="stretch-grid" style="margin-top:28px;">
+        <div class="stretch-card">
+          <div class="icon">🔍</div>
+          <h3>Cohort Anomaly Ranking</h3>
+          <p>Auto-groups refunds by City×Processor, City×Reason, or Method×Reason. Ranks each cohort with a weighted anomaly score. <strong style="color:#e5e5e5;">Guadalajara×OpenPay surfaces at rank #1 on load.</strong></p>
+          <div class="chips" style="margin-top:10px;">
+            <span class="chip">Surfaces unknown patterns</span>
+          </div>
+        </div>
+        <div class="stretch-card">
+          <div class="icon">🔖</div>
+          <h3>Saved Investigation Views</h3>
+          <p>Bookmark any filter state with a custom label. Persists to <code style="color:#ef4444">localStorage</code>. Cohort cards can auto-save via 🚩. Chips in sidebar restore the view in one click.</p>
+          <div class="chips" style="margin-top:10px;">
+            <span class="chip">Team collaboration-ready</span>
+          </div>
+        </div>
+        <div class="stretch-card">
+          <div class="icon">📊</div>
+          <h3>Period Comparison Chart</h3>
+          <p>Grouped bar chart comparing current filter window vs the equivalent prior period, broken down by country. Updates dynamically as the date range changes.</p>
+          <div class="chips" style="margin-top:10px;">
+            <span class="chip">Relative context at a glance</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 9. Score summary ── -->
+  <div class="slide" data-index="8">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:40px;">
+      <div style="text-align:center;">
+        <div class="label">Summary</div>
+        <h2>All 6 criteria addressed</h2>
+      </div>
+      <div class="card-grid cols-3" style="max-width:740px;">
+        <div class="card" style="text-align:center;">
+          <div class="pts">25</div>
+          <h3>Data viz</h3>
+        </div>
+        <div class="card" style="text-align:center;">
+          <div class="pts">20</div>
+          <h3>Filtering</h3>
+        </div>
+        <div class="card" style="text-align:center;">
+          <div class="pts">20</div>
+          <h3>Detection</h3>
+        </div>
+        <div class="card green" style="text-align:center;">
+          <div class="pts">15</div>
+          <h3>UX</h3>
+        </div>
+        <div class="card green" style="text-align:center;">
+          <div class="pts">10</div>
+          <h3>Code quality</h3>
+        </div>
+        <div class="card yellow" style="text-align:center;">
+          <div class="pts">10</div>
+          <h3>Stretch goal</h3>
+        </div>
+      </div>
+      <div class="score-total">
+        <div class="big">100</div>
+        <div class="sub">points possible</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 10. Live demo ── -->
+  <div class="slide cta" data-index="9">
+    <div class="label">Ready to explore</div>
+    <h2>Live Demo</h2>
+    <div class="divider"></div>
+    <p style="max-width: 480px; text-align:center;">Open the dashboard, apply a filter, click a high-risk row, and check the Pattern Discovery panel — the three anomalies surface immediately.</p>
+    <a class="demo-link" href="http://localhost:5173" target="_blank">Open Dashboard →</a>
+    <div class="chips" style="justify-content:center; margin-top: 28px;">
+      <span class="chip">npm run dev → localhost:5173</span>
+      <span class="chip">npm run build → dist/ for Vercel</span>
+    </div>
+  </div>
+
+</div><!-- /deck -->
+
+<!-- Nav -->
+<nav class="nav">
+  <button id="prev">← Prev</button>
+  <span class="counter" id="counter">1 / 10</span>
+  <button id="next">Next →</button>
+</nav>
+
+<div class="dots" id="dots"></div>
+<div class="slide-num" id="slideNum">01</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let current = 0;
+
+  const dotsEl = document.getElementById('dots');
+  const counterEl = document.getElementById('counter');
+  const slideNumEl = document.getElementById('slideNum');
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+
+  // Build dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.onclick = () => go(i);
+    dotsEl.appendChild(d);
+  });
+
+  function go(n) {
+    slides[current].classList.remove('visible');
+    setTimeout(() => slides[current].classList.remove('active'), 250);
+
+    current = Math.max(0, Math.min(total - 1, n));
+
+    slides[current].classList.add('active');
+    requestAnimationFrame(() => requestAnimationFrame(() => slides[current].classList.add('visible')));
+
+    document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
+    counterEl.textContent = `${current + 1} / ${total}`;
+    slideNumEl.textContent = String(current + 1).padStart(2, '0');
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current === total - 1;
+  }
+
+  prevBtn.onclick = () => go(current - 1);
+  nextBtn.onclick = () => go(current + 1);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') go(current + 1);
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') go(current - 1);
+  });
+
+  go(0);
+</script>
+</body>
+</html>
